@@ -20,7 +20,97 @@ const io = new IntersectionObserver((entries) => {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
   });
 }, { threshold: 0.14, rootMargin: '0px 0px -60px 0px' });
-document.querySelectorAll('.reveal,.reveal-stagger').forEach(el => io.observe(el));
+document.querySelectorAll('.reveal,.reveal-stagger,.iv,.iv-stagger,.txt-rise').forEach(el => io.observe(el));
+
+// ============ NAV SCROLL STATE ============
+const navShell = document.querySelector('.nav-shell');
+if (navShell) {
+  const updateNav = () => navShell.classList.toggle('scrolled', window.scrollY > 30);
+  window.addEventListener('scroll', updateNav, { passive: true });
+  updateNav();
+}
+
+// ============ COUNTERS ============
+const counterIO = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    const target = parseFloat(el.dataset.to || '0');
+    const decimals = parseInt(el.dataset.decimals || '0', 10);
+    const dur = parseInt(el.dataset.dur || '1800', 10);
+    const start = performance.now();
+    const fmt = n => decimals ? n.toFixed(decimals) : Math.round(n).toLocaleString();
+    const tick = (t) => {
+      const p = Math.min(1, (t - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(target * eased);
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = fmt(target);
+    };
+    requestAnimationFrame(tick);
+    counterIO.unobserve(el);
+  });
+}, { rootMargin: '-40px' });
+document.querySelectorAll('[data-counter]').forEach(el => counterIO.observe(el));
+
+// ============ MAGNETIC BUTTONS ============
+document.querySelectorAll('.magnetic').forEach(btn => {
+  btn.addEventListener('mousemove', (e) => {
+    const r = btn.getBoundingClientRect();
+    const x = e.clientX - r.left - r.width / 2;
+    const y = e.clientY - r.top - r.height / 2;
+    btn.style.transform = `translate(${x * 0.18}px, ${y * 0.28}px)`;
+  });
+  btn.addEventListener('mouseleave', () => btn.style.transform = 'translate(0,0)');
+});
+
+// ============ TILT CARDS + SPOTLIGHT ============
+document.querySelectorAll('.tilt-card, .spotlight-follow').forEach(card => {
+  const isTilt = card.classList.contains('tilt-card');
+  card.addEventListener('mousemove', (e) => {
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    const y = (e.clientY - r.top) / r.height;
+    card.style.setProperty('--mx', (x * 100) + '%');
+    card.style.setProperty('--my', (y * 100) + '%');
+    if (isTilt) {
+      const rx = (0.5 - y) * 6;
+      const ry = (x - 0.5) * 6;
+      card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(0)`;
+    }
+  });
+  card.addEventListener('mouseleave', () => {
+    if (isTilt) card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
+    card.style.setProperty('--mx', '50%');
+    card.style.setProperty('--my', '50%');
+  });
+});
+
+// ============ CURSOR GLOW ============
+const cursorGlow = document.createElement('div');
+cursorGlow.className = 'cursor-glow';
+document.body.appendChild(cursorGlow);
+let glowOn = false;
+window.addEventListener('mousemove', (e) => {
+  cursorGlow.style.transform = `translate3d(${e.clientX - 190}px, ${e.clientY - 190}px, 0)`;
+  if (!glowOn) { cursorGlow.classList.add('on'); glowOn = true; }
+});
+window.addEventListener('mouseleave', () => cursorGlow.classList.remove('on'));
+
+// ============ HERO PARALLAX ============
+const heroBg = document.querySelector('[data-parallax-bg]');
+const heroContent = document.querySelector('[data-parallax-content]');
+if (heroBg || heroContent) {
+  window.addEventListener('scroll', () => {
+    const h = window.innerHeight;
+    const p = Math.min(1, Math.max(0, window.scrollY / h));
+    if (heroBg) heroBg.style.transform = `translateY(${p * 18}%) scale(${1.05 + p * 0.06})`;
+    if (heroContent) {
+      heroContent.style.transform = `translateY(${p * -10}%)`;
+      heroContent.style.opacity = String(1 - p * 0.9);
+    }
+  }, { passive: true });
+}
 
 const menuBtn = document.getElementById('menuBtn');
 const menuPanel = document.getElementById('menuPanel');
